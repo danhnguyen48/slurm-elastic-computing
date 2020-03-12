@@ -1,0 +1,33 @@
+---
+- name: install nfs-utils
+  yum:
+    name: nfs-utils
+
+- name: ensure fileserver name exists
+  lineinfile:
+    dest: /etc/hosts
+    line: "{{ ansible_local.citc.fileserver_ip }} fileserver"
+    state: present
+  when:
+    - ansible_local.citc is defined
+    - ansible_local.citc.csp == "google"
+
+- name: Mount shared file system
+  mount:
+    path: /mnt/{{ filesystem_mount_point }}
+    src: "{{ filesystem_target_address }}:{{ filesystem_mount_point }}"
+    fstype: nfs
+    opts: defaults,nofail,nosuid
+    state: mounted
+  when:
+    ansible_local.citc.csp != "aws"
+
+- name: Mount shared file system
+  mount:
+    path: /mnt/shared
+    src: "{{ filesystem_target_address }}:/"
+    fstype: nfs
+    opts: defaults,nofail,nosuid
+    state: mounted
+  when:
+    ansible_local.citc.csp == "aws"

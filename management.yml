@@ -1,0 +1,56 @@
+---
+- name: finisher script
+  hosts: management
+  tasks:
+    - name: copy over finisher script
+      copy:
+        src: roles/finalise/files/finish.py
+        dest: /usr/local/bin/finish
+        mode: 0755
+    - name: set motd
+      copy:
+        content: |
+          ######################
+
+          Welcome to the cluster
+          Please now create users and define the number of nodes you want.
+
+          ######################
+        dest: /etc/motd
+
+- name: common
+  hosts: all
+  tags: common
+  roles:
+    - citc_user
+    - filesystem
+    - ssh
+    - security-updates
+    - ntp
+    - 389ds
+    - users
+    - sssd
+    - mysql
+    - slurm
+  tasks:
+    - name: copy SSH public keys to slurm account
+      copy:
+        src: "{{ admin_key_path[ansible_local.citc.csp] }}"
+        dest: /home/slurm/opc_authorized_keys
+        owner: slurm
+        group: slurm
+        mode: 0600
+
+- name: finalise
+  hosts: all
+  tags: finalise
+  roles:
+    - finalise
+    - monitoring
+    - clustershell
+    - packages
+    - devtoolset
+    - mpi
+    - sos
+    - debug-tools
+    - lmod

@@ -1,0 +1,50 @@
+---
+
+- name: Create citc group
+  group:
+    name: citc
+    gid: 1105
+
+- name: Create the citc user
+  user:
+    name: citc
+    comment: CitC Admin
+    uid: 1105
+    group: citc
+    groups:
+      - adm
+      - wheel
+      - systemd-journal
+  register: citc_user
+
+- name: Create citc user .ssh dir
+  file:
+    path: "{{ citc_user.home }}/.ssh"
+    state: directory
+    owner: citc
+    group: citc
+    mode: 0700
+
+- name: copy SSH public keys to citc user
+  copy:
+    src: "{{ admin_key_path[ansible_local.citc.csp] }}"
+    dest: "{{ citc_user.home }}/.ssh/authorized_keys"
+    owner: citc
+    group: citc
+    mode: 0600
+  when: slurm_role == "mgmt"
+- name: copy SSH public keys to citc user
+  copy:
+    src: "{{ admin_key_path }}"
+    dest: "{{ citc_user.home }}/.ssh/authorized_keys"
+    owner: citc
+    group: citc
+    mode: 0600
+  when: slurm_role == "compute"
+
+- name: Add citc to sudoers
+  copy:
+    content: |
+      citc ALL=(ALL) NOPASSWD:ALL
+    dest: /etc/sudoers.d/91-citc
+    validate: /usr/sbin/visudo -cf %s
